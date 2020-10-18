@@ -1,16 +1,40 @@
-import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { StyleSheet, View, Dimensions, Text, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Dimensions, Text } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
 import { Feather } from '@expo/vector-icons'
 import mapMarker from '../images/map-marker.png';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { RectButton } from 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
+import api from '../services/api';
+
+interface Orphanage {
+    id: number;
+    latitude: number;
+    longitude: number;
+    name: string
+}
 
 export default function OrphanagesMap() {
 
+
     const navigation = useNavigation();
-    function handleNavigateToOrphanagesDetails() {
-        navigation.navigate('OrphanagesDetails');
+
+    const [orphanages, setOrphanages] = useState<Orphanage[]>([]);
+
+    useFocusEffect(() => {
+        api.get('orphanages').then(response => {
+            setOrphanages(response.data);
+        })
+    });
+
+
+    function handleNavigateToOrphanagesDetails(id:number) {
+        navigation.navigate('OrphanagesDetails', {id});
+    }
+
+    function handleNavigateCreateOrphanages() {
+        navigation.navigate('SelectMapPosition');
     }
     return (
         <View style={styles.container}>
@@ -20,31 +44,41 @@ export default function OrphanagesMap() {
                 latitudeDelta: 0.008,
                 longitudeDelta: 0.008
             }}>
-                <Marker icon={mapMarker}
-                    calloutAnchor={{
-                        x: 2.7,
-                        y: 0.8
-                    }}
-                    coordinate={{
-                        latitude: -16.7454092,
-                        longitude: -49.2827692,
-                    }}
-                >
 
-                    <Callout tooltip={true} onPress={handleNavigateToOrphanagesDetails}>
-                        <View style={styles.calloutContainer}>
-                            <Text style={styles.calloutText}>Orfanato</Text>
-                        </View>
+                {
+                    orphanages.map(orphanage => {
+                        return (
+                            <Marker
+                                key={orphanage.id}
+                                icon={mapMarker}
+                                calloutAnchor={{
+                                    x: 2.7,
+                                    y: 0.8
+                                }}
+                                coordinate={{
+                                    latitude: orphanage.latitude,
+                                    longitude: orphanage.longitude,
+                                }}
+                            >
 
-                    </Callout>
-                </Marker>
+                                <Callout tooltip={true} onPress={()=>handleNavigateToOrphanagesDetails(orphanage.id)}>
+                                    <View style={styles.calloutContainer}>
+                                        <Text style={styles.calloutText}>{orphanage.name}</Text>
+                                    </View>
+
+                                </Callout>
+                            </Marker>
+                        );
+                    })
+                }
+
             </MapView>
 
             <View style={styles.footer}>
-                <Text style={styles.footerText}>Quantidade</Text>
-                <TouchableOpacity style={styles.createOrphanagesButtom}>
+                <Text style={styles.footerText}>{orphanages.length} Orfanatos encontrados</Text>
+                <RectButton style={styles.createOrphanagesButtom} onPress={handleNavigateCreateOrphanages}>
                     <Feather name="plus" size={20} />
-                </TouchableOpacity>
+                </RectButton>
             </View>
 
             {<StatusBar style="auto" />}
